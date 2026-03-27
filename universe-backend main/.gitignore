@@ -1,0 +1,30 @@
+venv/
+__pycache__/
+*.pyc
+.env
+
+# Ignore database files
+*.db
+
+# Ignore log files
+*.log
+
+# Ignore IDE specific files
+.vscode/
+.idea/
+# Ignore Docker files
+docker-compose.yml  
+Dockerfile
+# Ignore coverage reports
+coverage/
+# Ignore test result files
+test-results/
+# Ignore build artifacts
+build/
+dist/
+*.egg-info/
+
+#os
+
+.DS_Store
+Thumbs.db
