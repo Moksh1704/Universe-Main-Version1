@@ -27,12 +27,10 @@ function StudentTabNavigator() {
       screenOptions={{ headerShown: false }}
     >
       <StudentTab.Screen name="Home"       component={HomeScreen}       initialParams={{ role: 'student' }} />
+      <StudentTab.Screen name="Attendance" component={AttendanceScreen} initialParams={{ role: 'student' }} />
       <StudentTab.Screen name="Feed"       component={FeedScreen} />
       <StudentTab.Screen name="Events"     component={EventsScreen} />
       <StudentTab.Screen name="Navigation" component={NavigationScreen} />
-      <StudentTab.Screen name="Attendance" component={AttendanceScreen} initialParams={{ role: 'student' }} />
-      <StudentTab.Screen name="Career"     component={CareerScreen} />
-      <StudentTab.Screen name="Profile"    component={ProfileScreen}    initialParams={{ role: 'student' }} />
     </StudentTab.Navigator>
   );
 }
@@ -70,6 +68,7 @@ export default function AppNavigator() {
         <Stack.Screen name="FacultyReg"   component={FacultyRegScreen} />
         <Stack.Screen name="Login"        component={LoginScreen} />
         <Stack.Screen name="MainApp"      component={MainApp} />
+        <Stack.Screen name="Profile" component={ProfileScreen} /> 
       </Stack.Navigator>
     </NavigationContainer>
   );

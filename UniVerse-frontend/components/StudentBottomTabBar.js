@@ -5,12 +5,10 @@ import { COLORS, FONTS } from '../constants/theme';
 
 const TABS = [
   { name:'Home',       icon:'home',              outline:'home-outline',              label:'Home'       },
+  { name:'Attendance', icon:'checkmark-circle',   outline:'checkmark-circle-outline',   label:'Attend'     },
   { name:'Feed',       icon:'newspaper',          outline:'newspaper-outline',          label:'Feed'       },
   { name:'Events',     icon:'calendar',           outline:'calendar-outline',           label:'Events'     },
-  { name:'Navigation', icon:'map',                outline:'map-outline',                label:'Map'        },
-  { name:'Attendance', icon:'checkmark-circle',   outline:'checkmark-circle-outline',   label:'Attend'     },
-  { name:'Career',     icon:'briefcase',          outline:'briefcase-outline',          label:'Career'     },
-  { name:'Profile',    icon:'person-circle',      outline:'person-circle-outline',      label:'Profile'    },
+  { name:'Navigation', icon:'map',                outline:'map-outline',                label:'Map'        }
 ];
 
 export default function StudentBottomTabBar({ state, navigation }) {

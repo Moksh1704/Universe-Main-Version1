@@ -1,20 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, FlatList,
-  TouchableOpacity, ScrollView, StatusBar
+  TouchableOpacity, StatusBar
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { apiRequest } from '../api/api';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../constants/theme';
 
+// ─── NOTE: Pass `navigation` prop into HomeScreen from your navigator ─────────
+// e.g. <HomeScreen navigation={navigation} /> or via React Navigation's stack.
+
 const TYPE_META = {
   exam:    { label: 'EXAM',    color: '#C0392B' },
   result:  { label: 'RESULT',  color: '#1E8449' },
   holiday: { label: 'HOLIDAY', color: '#D68910' },
 };
-
-const FILTERS = ['All', 'Exam', 'Result', 'Holiday'];
 
 const AnnouncementCard = ({ item }) => {
   const meta = TYPE_META[item.type] || { label: 'UPDATE', color: COLORS.primary };
@@ -35,12 +36,7 @@ const AnnouncementCard = ({ item }) => {
                 {meta.label}
               </Text>
             </View>
-
-            {item.urgent && (
-              <View style={s.urgentPill}>
-                <Text style={s.urgentTxt}>URGENT</Text>
-              </View>
-            )}
+            {/* URGENT tag removed */}
           </View>
         </View>
 
@@ -56,8 +52,7 @@ const AnnouncementCard = ({ item }) => {
   );
 };
 
-export default function HomeScreen() {
-  const [filter, setFilter] = useState('All');
+export default function HomeScreen({ navigation }) {
   const [announcements, setAnnouncements] = useState([]);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -90,10 +85,12 @@ export default function HomeScreen() {
     fetchData();
   }, []);
 
-  const filtered =
-    filter === 'All'
-      ? announcements
-      : announcements.filter(a => a.type === filter.toLowerCase());
+  const handleProfilePress = () => {
+    // Navigate to the existing Profile screen
+    if (navigation) {
+      navigation.navigate('Profile');
+    }
+  };
 
   if (loading) {
     return (
@@ -116,15 +113,14 @@ export default function HomeScreen() {
             <Text style={s.greeting}>
               {greeting}, {user?.name?.split(' ')[0]}
             </Text>
-
             <Text style={s.headerSub}>
               {user?.department} · Year {user?.year} · Section {user?.section}
             </Text>
           </View>
 
-          <TouchableOpacity style={s.notifBtn}>
-            <Ionicons name="notifications-outline" size={22} color={COLORS.secondary} />
-            <View style={s.notifDot} />
+          {/* Profile icon — replaces notification bell, opens Profile page */}
+          <TouchableOpacity style={s.profileBtn} onPress={handleProfilePress} activeOpacity={0.8}>
+            <Ionicons name="person-circle-outline" size={26} color={COLORS.secondary} />
           </TouchableOpacity>
         </View>
       </LinearGradient>
@@ -132,36 +128,26 @@ export default function HomeScreen() {
       {/* Content */}
       <View style={s.body}>
 
+        {/* Section header with notification bell on the right */}
         <View style={s.sectionRow}>
           <Text style={s.sectionTitle}>Latest Updates</Text>
 
-          <View style={s.countBadge}>
-            <Text style={s.countBadgeTxt}>{filtered.length}</Text>
+          <View style={s.sectionRight}>
+            <View style={s.countBadge}>
+              <Text style={s.countBadgeTxt}>{announcements.length}</Text>
+            </View>
+
+            {/* Notification icon moved here */}
+            <TouchableOpacity style={s.notifBtn} activeOpacity={0.75}>
+              <Ionicons name="notifications-outline" size={20} color={COLORS.primary} />
+              <View style={s.notifDot} />
+            </TouchableOpacity>
           </View>
         </View>
 
-        {/* Filters */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={s.filterRow}
-        >
-          {FILTERS.map(f => (
-            <TouchableOpacity
-              key={f}
-              style={[s.filterChip, filter === f && s.filterChipActive]}
-              onPress={() => setFilter(f)}
-            >
-              <Text style={[s.filterChipTxt, filter === f && s.filterChipTxtActive]}>
-                {f}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-
         {/* List */}
         <FlatList
-          data={filtered}
+          data={announcements}
           keyExtractor={i => i.id}
           renderItem={({ item }) => <AnnouncementCard item={item} />}
           contentContainerStyle={s.list}
@@ -173,6 +159,7 @@ export default function HomeScreen() {
     </View>
   );
 }
+
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bgLight },
 
@@ -181,21 +168,14 @@ const s = StyleSheet.create({
   greeting: { fontSize: FONTS.sizes.xl, fontWeight: '800', color: COLORS.secondary },
   headerSub: { fontSize: FONTS.sizes.xs, color: 'rgba(255,255,255,0.6)', marginTop: 4 },
 
-  notifBtn: {
+  // Profile button (top-right in header)
+  profileBtn: {
     padding: 9,
     backgroundColor: 'rgba(255,255,255,0.14)',
     borderRadius: RADIUS.md,
-    position: 'relative',
     marginTop: 2,
-  },
-  notifDot: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-    backgroundColor: COLORS.accent,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 
   body: { flex: 1, paddingHorizontal: SPACING.md, paddingTop: SPACING.md },
@@ -203,13 +183,18 @@ const s = StyleSheet.create({
   sectionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.sm,
+    justifyContent: 'space-between',
     marginBottom: SPACING.sm,
   },
   sectionTitle: {
     fontSize: FONTS.sizes.lg,
     fontWeight: '800',
     color: COLORS.textPrimary,
+  },
+  sectionRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
   },
 
   countBadge: {
@@ -224,44 +209,22 @@ const s = StyleSheet.create({
     color: COLORS.secondary,
   },
 
-filterRow: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  gap: 10,
-  paddingBottom: SPACING.sm,
-  paddingRight: SPACING.md,
-},
-
-filterChip: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  justifyContent: 'center',
-
-  paddingHorizontal: 18,
-  height: 36,                // 🔥 FIX: consistent height
-  borderRadius: 20,
-
-  backgroundColor: COLORS.cardBg,
-  borderWidth: 1.5,
-  borderColor: COLORS.cardBorder,
-
-  ...SHADOWS.card,
-},
-
-filterChipActive: {
-  backgroundColor: COLORS.primary,
-  borderColor: COLORS.primary,
-},
-
-filterChipTxt: {
-  fontSize: FONTS.sizes.sm,
-  fontWeight: '700',
-  color: COLORS.textSecondary,
-},
-
-filterChipTxtActive: {
-  color: '#FFFFFF',
-},
+  // Notification bell (now beside Latest Updates)
+  notifBtn: {
+    position: 'relative',
+    padding: 6,
+    backgroundColor: COLORS.primary + '12',
+    borderRadius: RADIUS.md,
+  },
+  notifDot: {
+    position: 'absolute',
+    top: 5,
+    right: 5,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: COLORS.accent,
+  },
 
   list: { paddingBottom: 110 },
 
@@ -312,19 +275,6 @@ filterChipTxtActive: {
   typePillTxt: {
     fontSize: 10,
     fontWeight: '800',
-  },
-
-  urgentPill: {
-    borderRadius: RADIUS.full,
-    paddingHorizontal: 9,
-    paddingVertical: 3,
-    backgroundColor: '#C0392B18',
-  },
-
-  urgentTxt: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#C0392B',
   },
 
   cardTitle: {

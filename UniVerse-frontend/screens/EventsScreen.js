@@ -1,20 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, FlatList,
-  TouchableOpacity, StatusBar, ScrollView
+  TouchableOpacity, StatusBar, TextInput, ScrollView
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { apiRequest } from '../api/api';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../constants/theme';
 
-const CATEGORIES = [
-  { key: 'All', icon: 'apps-outline', label: 'All' },
-  { key: 'Technical', icon: 'code-slash-outline', label: 'Technical' },
-  { key: 'Non-Technical', icon: 'briefcase-outline', label: 'Non-Tech' },
-  { key: 'Cultural', icon: 'musical-notes-outline', label: 'Cultural' },
-  { key: 'Sports', icon: 'trophy-outline', label: 'Sports' },
-];
+const CATEGORIES = ['All', 'Technical', 'Cultural', 'Sports', 'Workshops'];
 
 const EventCard = ({ event }) => {
   const [reg, setReg] = useState(event.registered);
@@ -85,9 +79,10 @@ const EventCard = ({ event }) => {
 };
 
 export default function EventsScreen() {
-  const [cat, setCat] = useState('All');
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeCategory, setActiveCategory] = useState('All');
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -105,12 +100,19 @@ export default function EventsScreen() {
     fetchEvents();
   }, []);
 
-  const filtered =
-    cat === 'All'
-      ? events
-      : events.filter(e =>
-          e.category?.toLowerCase() === cat.toLowerCase()
-        );
+  const filteredEvents = events.filter(event => {
+    const matchesSearch =
+      searchQuery.trim() === '' ||
+      event.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      event.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      event.venue?.toLowerCase().includes(searchQuery.toLowerCase());
+
+    const matchesCategory =
+      activeCategory === 'All' ||
+      event.category?.toLowerCase() === activeCategory.toLowerCase();
+
+    return matchesSearch && matchesCategory;
+  });
 
   if (loading) {
     return (
@@ -131,50 +133,66 @@ export default function EventsScreen() {
         <Text style={s.headerSub}>Campus events and activities</Text>
       </LinearGradient>
 
-      <View style={s.body}>
-
-        {/* Filter */}
-        <View style={s.filterWrap}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={s.filterRow}
-            bounces={false}
-          >
-            {CATEGORIES.map(c => {
-              const active = cat === c.key;
-              return (
-                <TouchableOpacity
-                  key={c.key}
-                  style={[s.filterBtn, active && s.filterBtnActive]}
-                  onPress={() => setCat(c.key)}
-                >
-                  <Ionicons
-                    name={c.icon}
-                    size={14}
-                    color={active ? '#FFFFFF' : COLORS.textSecondary}
-                  />
-                  <Text style={[s.filterBtnTxt, active && s.filterBtnTxtActive]}>
-                    {c.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
+      {/* Search Bar */}
+      <View style={s.searchWrap}>
+        <View style={s.searchBar}>
+          <Ionicons name="search-outline" size={18} color={COLORS.textMuted} />
+          <TextInput
+            style={s.searchInput}
+            placeholder="Search events..."
+            placeholderTextColor={COLORS.textMuted}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            returnKeyType="search"
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Ionicons name="close-circle" size={17} color={COLORS.textMuted} />
+            </TouchableOpacity>
+          )}
         </View>
+      </View>
 
+      {/* Category Filters */}
+      <View style={s.filterWrap}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={s.filterScroll}
+        >
+          {CATEGORIES.map(cat => {
+            const active = activeCategory === cat;
+            return (
+              <TouchableOpacity
+                key={cat}
+                style={[s.filterPill, active && s.filterPillActive]}
+                onPress={() => setActiveCategory(cat)}
+                activeOpacity={0.8}
+              >
+                <Text style={[s.filterPillTxt, active && s.filterPillTxtActive]}>
+                  {cat}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
+
+      <View style={s.body}>
         {/* List */}
         <FlatList
-          data={filtered}
+          data={filteredEvents}
           keyExtractor={i => i.id}
           renderItem={({ item }) => <EventCard event={item} />}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={s.list}
           ListEmptyComponent={
-            <Text style={s.empty}>No events found.</Text>
+            <View style={s.emptyWrap}>
+              <Ionicons name="calendar-outline" size={40} color={COLORS.textMuted} />
+              <Text style={s.empty}>No events found.</Text>
+            </View>
           }
         />
-
       </View>
     </View>
   );
@@ -186,25 +204,64 @@ const s = StyleSheet.create({
   headerTitle: { fontSize: FONTS.sizes.xxxl, fontWeight: '900', color: COLORS.secondary },
   headerSub: { fontSize: FONTS.sizes.sm, color: 'rgba(255,255,255,0.6)', marginTop: 4 },
 
-  body: { flex: 1 },
-  filterWrap: { paddingHorizontal: SPACING.md, paddingTop: SPACING.md, paddingBottom: 2 },
-  filterRow: { flexDirection: 'row', gap: 8, paddingBottom: SPACING.sm, alignItems: 'center' },
-
-  filterBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    paddingHorizontal: 16, paddingVertical: 9,
-    borderRadius: RADIUS.full,
+  // Search
+  searchWrap: {
+    paddingHorizontal: SPACING.md,
+    paddingTop: SPACING.md,
+    paddingBottom: SPACING.sm,
+  },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
     backgroundColor: COLORS.cardBg,
-    borderWidth: 1.5, borderColor: COLORS.cardBorder,
-    minHeight: 36,
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    borderColor: COLORS.cardBorder,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: 11,
     ...SHADOWS.card,
   },
-  filterBtnActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
-  filterBtnTxt: { fontSize: FONTS.sizes.sm, fontWeight: '700', color: COLORS.textSecondary },
-  filterBtnTxtActive: { color: '#FFFFFF' },
+  searchInput: {
+    flex: 1,
+    fontSize: FONTS.sizes.sm,
+    color: COLORS.textPrimary,
+  },
 
+  // Filters
+  filterWrap: {
+    paddingBottom: SPACING.sm,
+  },
+  filterScroll: {
+    paddingHorizontal: SPACING.md,
+    gap: SPACING.sm,
+  },
+  filterPill: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.cardBg,
+    borderWidth: 1.5,
+    borderColor: COLORS.cardBorder,
+  },
+  filterPillActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  filterPillTxt: {
+    fontSize: FONTS.sizes.sm,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
+  },
+  filterPillTxtActive: {
+    color: COLORS.secondary,
+    fontWeight: '700',
+  },
+
+  body: { flex: 1 },
   list: { padding: SPACING.md, paddingBottom: 110 },
-  empty: { textAlign: 'center', color: COLORS.textMuted, paddingTop: 40 },
+  emptyWrap: { alignItems: 'center', paddingTop: 40, gap: SPACING.sm },
+  empty: { textAlign: 'center', color: COLORS.textMuted },
 
   card: {
     backgroundColor: COLORS.cardBg, borderRadius: RADIUS.lg,

@@ -9,6 +9,19 @@ import { apiRequest } from '../api/api';
 import { MOCK_STUDENT } from '../data/mockData';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../constants/theme';
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+const formatDateOnly = (raw) => {
+  if (!raw || raw === 'Just now') return raw || '';
+  const d = new Date(raw);
+  if (isNaN(d.getTime())) return raw;
+
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+
+  return '${day}-${month}-${year}';
+};
+
 // ─── Comment Bottom Sheet ─────────────────────────────────────────────────────
 const CommentsModal = ({ visible, post, comments, onClose, onAddComment }) => {
   const [text, setText] = useState('');
@@ -59,8 +72,10 @@ const CommentsModal = ({ visible, post, comments, onClose, onAddComment }) => {
               <View style={cm.commentBody}>
                 <View style={cm.commentHead}>
                   <Text style={cm.commentAuthor}>{c.author || c.user_name}</Text>
-                  <Text style={cm.commentTime}>{c.time || c.created_at || ''}</Text>
+                  {/* Show only date, no time */}
+                  <Text style={cm.commentTime}>{formatDateOnly(c.time || c.created_at || '')}</Text>
                 </View>
+                {/* Larger comment text */}
                 <Text style={cm.commentText}>{c.text || c.content}</Text>
               </View>
             </View>
@@ -111,7 +126,8 @@ const cm = StyleSheet.create({
   commentHead:       { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 },
   commentAuthor:     { fontSize: FONTS.sizes.sm, fontWeight: '700', color: COLORS.textPrimary },
   commentTime:       { fontSize: 10, color: COLORS.textMuted },
-  commentText:       { fontSize: FONTS.sizes.sm, color: COLORS.textSecondary, lineHeight: 19 },
+  // ↑ Increased comment text size for readability
+  commentText:       { fontSize: FONTS.sizes.md, color: COLORS.textSecondary, lineHeight: 22 },
   inputRow:          { flexDirection: 'row', alignItems: 'flex-end', gap: SPACING.sm, padding: SPACING.md, borderTopWidth: 1, borderTopColor: COLORS.cardBorder, backgroundColor: COLORS.cardBg },
   inputAvatar:       { width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.primaryLight, justifyContent: 'center', alignItems: 'center' },
   inputAvatarTxt:    { color: COLORS.secondary, fontWeight: '700', fontSize: FONTS.sizes.sm },
@@ -120,16 +136,16 @@ const cm = StyleSheet.create({
 });
 
 // ─── Post Card ────────────────────────────────────────────────────────────────
-const PostCard = ({ post, onDelete, onComment, onRepost, onLike }) => {
+const PostCard = ({ post, onDelete, onComment, onLike }) => {
   const [liked, setLiked]       = useState(post.isLiked || false);
   const [likeCount, setLikeCount] = useState(post.likes || 0);
 
   const userName    = post.userName || post.user_name || 'Unknown';
   const userRole    = post.userRole || post.role || 'Student';
-  const timePosted  = post.timePosted || post.created_at || '';
-  const body        = post.content || post.text || '';
+  const rawDate = post.timePosted || post.created_at || '';
+const timePosted = formatDateOnly(rawDate);
   const commentCount = post.commentCount ?? post.comments ?? post.comment_count ?? 0;
-  const repostCount  = post.repostCount  ?? post.reposts  ?? post.repost_count  ?? 0;
+  // Smaller initials avatar: 2 chars from name
   const initials    = userName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
   const isRepost    = !!post.repostedBy;
 
@@ -154,7 +170,7 @@ const PostCard = ({ post, onDelete, onComment, onRepost, onLike }) => {
         </View>
       )}
 
-      {/* Post header */}
+      {/* Post header — smaller avatar, semi-bold smaller username */}
       <View style={s.postHead}>
         <View style={s.avatar}>
           <Text style={s.avatarTxt}>{initials}</Text>
@@ -177,7 +193,7 @@ const PostCard = ({ post, onDelete, onComment, onRepost, onLike }) => {
       {/* Body */}
       <Text style={s.postBody}>{body}</Text>
 
-      {/* Actions */}
+      {/* Actions — only Like and Comment (no Repost, no Share) */}
       <View style={s.actions}>
         {/* Like */}
         <TouchableOpacity
@@ -193,36 +209,14 @@ const PostCard = ({ post, onDelete, onComment, onRepost, onLike }) => {
           <Text style={[s.actionTxt, liked && { color: COLORS.danger }]}>{likeCount}</Text>
         </TouchableOpacity>
 
-        {/* Comment */}
+        {/* Comment — highlighted */}
         <TouchableOpacity
-          style={s.actionBtn}
+          style={[s.actionBtn, s.commentHighlight]}
           onPress={() => onComment(post)}
           hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
         >
-          <Ionicons name="chatbubble-outline" size={20} color={COLORS.textSecondary} />
-          <Text style={s.actionTxt}>{commentCount}</Text>
-        </TouchableOpacity>
-
-        {/* Repost */}
-        <TouchableOpacity
-          style={s.actionBtn}
-          onPress={() => onRepost(post)}
-          hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
-        >
-          <Ionicons
-            name="repeat"
-            size={20}
-            color={post.repostedByMe ? COLORS.success : COLORS.textSecondary}
-          />
-          <Text style={[s.actionTxt, post.repostedByMe && { color: COLORS.success }]}>{repostCount}</Text>
-        </TouchableOpacity>
-
-        {/* Share */}
-        <TouchableOpacity
-          style={s.actionBtn}
-          hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
-        >
-          <Ionicons name="share-social-outline" size={20} color={COLORS.textSecondary} />
+          <Ionicons name="chatbubble" size={18} color={COLORS.secondary} />
+          <Text style={s.commentHighlightTxt}>{commentCount}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -253,7 +247,6 @@ export default function FeedScreen() {
       try {
         const data = await apiRequest('/posts');
         const raw = data.posts || data.data || data;
-        // Normalise to the shape the rest of the screen expects
         const normalised = (Array.isArray(raw) ? raw : []).map(p => ({
           ...p,
           userName:      p.userName    || p.user_name    || 'Unknown',
@@ -262,13 +255,10 @@ export default function FeedScreen() {
           content:       p.content     || p.text         || '',
           likes:         p.likes       ?? 0,
           commentCount:  p.commentCount ?? p.comments ?? p.comment_count ?? 0,
-          repostCount:   p.repostCount  ?? p.reposts  ?? p.repost_count  ?? 0,
           isLiked:       p.isLiked      ?? false,
-          repostedByMe:  p.repostedByMe ?? false,
           isOwn:         p.isOwn        ?? false,
         }));
         setPosts(normalised);
-        // Initialise empty comment buckets for each post
         const buckets = {};
         normalised.forEach(p => { buckets[p.id] = []; });
         setAllComments(buckets);
@@ -313,16 +303,13 @@ export default function FeedScreen() {
         content:      created.content     || created.text         || newPostText.trim(),
         likes:        0,
         commentCount: 0,
-        repostCount:  0,
         isLiked:      false,
-        repostedByMe: false,
         isOwn:        true,
       };
       setPosts(prev => [newPost, ...prev]);
       setAllComments(prev => ({ ...prev, [newPost.id]: [] }));
     } catch (err) {
       console.log('Post error:', err);
-      // Optimistic fallback — add locally even if API fails
       const newPost = {
         id:           Date.now().toString(),
         userName:     user.name,
@@ -331,9 +318,7 @@ export default function FeedScreen() {
         content:      newPostText.trim(),
         likes:        0,
         commentCount: 0,
-        repostCount:  0,
         isLiked:      false,
-        repostedByMe: false,
         isOwn:        true,
       };
       setPosts(prev => [newPost, ...prev]);
@@ -356,7 +341,8 @@ export default function FeedScreen() {
         id:     created.id        || Date.now().toString(),
         author: created.author    || created.user_name || user.name,
         text:   created.text      || created.content   || text,
-        time:   created.time      || created.created_at || 'Just now',
+        // Store only the date portion
+        time:   formatDateOnly(created.time || created.created_at || new Date().toISOString()),
       };
       setAllComments(prev => ({
         ...prev,
@@ -364,12 +350,11 @@ export default function FeedScreen() {
       }));
     } catch (err) {
       console.log('Comment error:', err);
-      // Optimistic fallback
       const newComment = {
         id:     Date.now().toString(),
         author: user.name,
         text,
-        time:   'Just now',
+        time:   formatDateOnly(new Date().toISOString()),
       };
       setAllComments(prev => ({
         ...prev,
@@ -379,46 +364,6 @@ export default function FeedScreen() {
     setPosts(prev => prev.map(p =>
       p.id === postId ? { ...p, commentCount: (p.commentCount ?? 0) + 1 } : p
     ));
-  };
-
-  const handleRepost = async (post) => {
-    if (post.isOwn) {
-      Alert.alert('Cannot Repost', 'You cannot repost your own post.');
-      return;
-    }
-    if (post.repostedByMe) {
-      // Undo repost
-      try { await apiRequest(`/posts/${post.id}/repost`, 'DELETE'); } catch (e) { console.log(e); }
-      setPosts(prev =>
-        prev
-          .filter(p => !(p.repostId === post.id))
-          .map(p => p.id === post.id
-            ? { ...p, repostedByMe: false, repostCount: p.repostCount - 1 }
-            : p
-          )
-      );
-    } else {
-      // Add repost
-      try { await apiRequest(`/posts/${post.id}/repost`, 'POST'); } catch (e) { console.log(e); }
-      const repostEntry = {
-        ...post,
-        id:           `rp_${post.id}_${Date.now()}`,
-        repostId:     post.id,
-        repostedBy:   user.name,
-        repostedByMe: false,
-        timePosted:   'Just now',
-        isOwn:        false,
-      };
-      setPosts(prev => [
-        repostEntry,
-        ...prev.map(p =>
-          p.id === post.id
-            ? { ...p, repostedByMe: true, repostCount: p.repostCount + 1 }
-            : p
-        ),
-      ]);
-      Alert.alert('Reposted!', `You reposted ${post.userName}'s post.`);
-    }
   };
 
   const activeComments = activePost ? (allComments[activePost.id] || []) : [];
@@ -446,7 +391,9 @@ export default function FeedScreen() {
               post={item}
               onDelete={handleDelete}
               onComment={handleComment}
-              onRepost={handleRepost}
+              onLike={(id, val) =>
+                setPosts(prev => prev.map(p => p.id === id ? { ...p, isLiked: val } : p))
+              }
             />
           )}
           contentContainerStyle={s.list}
@@ -457,7 +404,7 @@ export default function FeedScreen() {
         />
       )}
 
-      {/* FAB — new post */}
+      {/* FAB — bottom-right corner */}
       <TouchableOpacity style={s.fab} onPress={() => setNewPostModal(true)} activeOpacity={0.88}>
         <LinearGradient colors={[COLORS.accent, COLORS.accentDark]} style={s.fabGrad}>
           <Ionicons name="add" size={28} color={COLORS.primary} />
@@ -528,10 +475,12 @@ const s = StyleSheet.create({
   repostBannerTxt:  { fontSize: FONTS.sizes.xs, color: COLORS.primary, fontWeight: '700' },
 
   postHead:   { flexDirection: 'row', alignItems: 'center', marginBottom: SPACING.sm },
-  avatar:     { width: 42, height: 42, borderRadius: 21, backgroundColor: COLORS.primaryLight, justifyContent: 'center', alignItems: 'center', marginRight: SPACING.sm },
-  avatarTxt:  { color: COLORS.secondary, fontWeight: '700', fontSize: FONTS.sizes.md },
-  postName:   { fontSize: FONTS.sizes.md, fontWeight: '700', color: COLORS.textPrimary },
-  postMeta:   { fontSize: FONTS.sizes.xs, color: COLORS.textMuted, marginTop: 2 },
+  // ↓ Smaller avatar: 34×34 (was 42×42)
+  avatar:     { width: 34, height: 34, borderRadius: 17, backgroundColor: COLORS.primaryLight, justifyContent: 'center', alignItems: 'center', marginRight: SPACING.sm },
+  avatarTxt:  { color: COLORS.secondary, fontWeight: '700', fontSize: FONTS.sizes.sm },
+  // ↓ Semi-bold (600) slightly smaller font (was md/700)
+  postName:   { fontSize: FONTS.sizes.sm, fontWeight: '600', color: COLORS.textPrimary },
+  postMeta:   { fontSize: FONTS.sizes.xs, color: COLORS.textMuted, marginTop: 1 },
   delBtn:     { padding: 4 },
   postBody:   { fontSize: FONTS.sizes.md, color: COLORS.textPrimary, lineHeight: 22, marginBottom: SPACING.md },
 
@@ -539,8 +488,21 @@ const s = StyleSheet.create({
   actionBtn:  { flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 2 },
   actionTxt:  { fontSize: FONTS.sizes.sm, color: COLORS.textSecondary, fontWeight: '600' },
 
-  // FAB
-  fab:     { position: 'absolute', bottom: 100, right: SPACING.lg, borderRadius: 28, overflow: 'hidden', ...SHADOWS.button },
+  // Comment button highlight
+  commentHighlight: {
+    borderRadius: RADIUS.full,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    gap: 5,
+  },
+  commentHighlightTxt: {
+    fontSize: FONTS.sizes.sm,
+    color: COLORS.secondary,
+    fontWeight: '800',
+  },
+
+  // FAB — positioned bottom-right
+  fab:     { position: 'absolute', bottom: 24, right: SPACING.lg, borderRadius: 28, overflow: 'hidden', ...SHADOWS.button },
   fabGrad: { width: 56, height: 56, justifyContent: 'center', alignItems: 'center' },
 
   // New post modal
